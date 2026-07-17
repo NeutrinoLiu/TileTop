@@ -49,8 +49,16 @@ mini Finder window that never closes:
 
 ## Install
 
-Requires macOS 13+ and the Xcode Command Line Tools (`xcode-select --install`
-— the full Xcode is *not* needed).
+Requires macOS 13+.
+
+**Download**: grab `TileTop-x.y.z.zip` from
+[Releases](https://github.com/NeutrinoLiu/TileTop/releases), unzip, and move
+`TileTop.app` wherever you like. The build is ad-hoc signed (no paid developer
+certificate), so on first launch macOS will warn you: right-click the app →
+Open, or allow it under System Settings → Privacy & Security.
+
+**Build from source**: needs the Xcode Command Line Tools
+(`xcode-select --install` — the full Xcode is *not* needed).
 
 ```sh
 git clone https://github.com/NeutrinoLiu/TileTop.git
