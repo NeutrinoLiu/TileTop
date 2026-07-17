@@ -48,6 +48,7 @@ Quit the running instance before rebuilding: `pkill -x TileTop`.
   `DragHandleView`, `Widget` base class, modal prompt helpers.
 - `Sources/BrowserWidget.swift` — web view widget.
 - `Sources/FolderWidget.swift` — folder canvas widget + `FolderMonitor`.
+- `Resources/` — `AppIcon.icns` + `MenuIconTemplate.png`, copied into the bundle.
 - `Info.plist` — copied verbatim into the bundle; `LSUIElement=true` (no Dock icon).
 - `build.sh` — creates the bundle by hand (compiles `Sources/*.swift`); `build/` is disposable output.
 

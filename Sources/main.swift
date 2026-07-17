@@ -33,7 +33,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func setUpStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Widgets")
+        if let icon = NSImage(named: "MenuIconTemplate") {
+            icon.isTemplate = true
+            icon.size = NSSize(width: 18, height: 18)
+            statusItem.button?.image = icon
+        } else {
+            statusItem.button?.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Widgets")
+        }
         statusMenu.delegate = self
         statusItem.menu = statusMenu
     }

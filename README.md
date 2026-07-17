@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/icon.png" width="128"></p>
+
 # TileTop
 
 Lightweight desktop widgets for macOS — glassy tiles that live on your
