@@ -99,4 +99,6 @@ account. Build it yourself from source — that's the point.
 
 ## License
 
-[MIT](LICENSE)
+[Apache-2.0](LICENSE). Free to use, modify, and redistribute — but if you
+redistribute TileTop or build on it, keep the [NOTICE](NOTICE) file crediting
+the original author.
