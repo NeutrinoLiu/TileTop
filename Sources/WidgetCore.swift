@@ -12,6 +12,18 @@ struct WidgetConfig: Codable {
     var folderPath: String? = nil
     var collapsed: Bool? = nil
     var expandedFrame: String? = nil // NSStringFromRect, kept while collapsed
+    var homeDisplay: String? = nil // UUID of the display the user last placed this widget on
+    var displayFrames: [String: String]? = nil // display UUID -> NSStringFromRect
+}
+
+extension NSScreen {
+    // Stable hardware identifier; survives disconnect/reconnect (unlike NSScreenNumber).
+    var displayUUID: String? {
+        guard let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber,
+              let uuid = CGDisplayCreateUUIDFromDisplayID(number.uint32Value)?.takeRetainedValue()
+        else { return nil }
+        return CFUUIDCreateString(nil, uuid) as String
+    }
 }
 
 enum WidgetStore {
@@ -129,6 +141,49 @@ class Widget: NSObject {
         handle.onDoubleClick = { [weak self] in self?.toggleCollapsed() }
 
         window.setFrameAutosaveName(frameName)
+
+        NotificationCenter.default.addObserver(self, selector: #selector(placementChanged),
+                                               name: NSWindow.didMoveNotification, object: window)
+        NotificationCenter.default.addObserver(self, selector: #selector(placementChanged),
+                                               name: NSWindow.didResizeNotification, object: window)
+    }
+
+    // MARK: - Per-display placement memory
+
+    // Only user-driven changes count as placement: a held mouse button means a drag
+    // or live resize. System reshuffles (display disconnect) happen with no button
+    // down, so they never overwrite the widget's remembered home display.
+    @objc private func placementChanged() {
+        if NSEvent.pressedMouseButtons != 0 { recordPlacement() }
+    }
+
+    func recordPlacement() {
+        guard let uuid = window.screen?.displayUUID else { return }
+        var frames = config.displayFrames ?? [:]
+        frames[uuid] = NSStringFromRect(window.frame)
+        config.displayFrames = frames
+        config.homeDisplay = uuid
+    }
+
+    // Called at spawn so pre-existing widgets get a home without needing a move.
+    func recordPlacementIfUnset() {
+        if config.homeDisplay == nil { recordPlacement() }
+    }
+
+    // If the widget's home display is attached but the widget sits elsewhere
+    // (it was evicted while the display was gone), move it back.
+    func restorePlacementIfDisplayReturned() {
+        guard let home = config.homeDisplay,
+              let savedString = config.displayFrames?[home],
+              let target = NSScreen.screens.first(where: { $0.displayUUID == home }),
+              window.screen?.displayUUID != home else { return }
+        var frame = NSRectFromString(savedString)
+        // Stale coordinates (rearranged layout): keep the size, re-anchor on the target.
+        if !frame.intersects(target.frame) {
+            frame.origin = NSPoint(x: target.visibleFrame.minX + 40,
+                                   y: target.visibleFrame.maxY - 40 - frame.height)
+        }
+        window.setFrame(frame, display: true)
     }
 
     // Pins content to fill the container, with the title and drag handle layered on top.
@@ -172,6 +227,7 @@ class Widget: NSObject {
             frame.origin.x = window.frame.origin.x
             frame.origin.y = window.frame.maxY - expanded.height
             window.setFrame(frame, display: true, animate: true)
+            recordPlacement()
         } else {
             expandedFrameRect = window.frame
             config.collapsed = true
@@ -181,6 +237,7 @@ class Widget: NSObject {
             frame.origin.y = frame.maxY - Self.barHeight
             frame.size.height = Self.barHeight
             window.setFrame(frame, display: true, animate: true)
+            recordPlacement()
         }
     }
 
@@ -223,6 +280,7 @@ class Widget: NSObject {
     }
 
     func tearDown() {
+        NotificationCenter.default.removeObserver(self)
         window.orderOut(nil)
         NSWindow.removeFrame(usingName: frameName)
     }

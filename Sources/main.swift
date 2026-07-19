@@ -5,10 +5,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let statusMenu = NSMenu()
 
+    private var screenReshuffleWork: DispatchWorkItem?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         WidgetStore.load().forEach(spawn)
         persist()
         setUpStatusItem()
+        // Covers a display that was reattached while the app wasn't running.
+        widgets.forEach { $0.restorePlacementIfDisplayReturned() }
+        NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
+                                               name: NSApplication.didChangeScreenParametersNotification, object: nil)
+    }
+
+    // When a display comes (back), wait for the reshuffle to settle, then send
+    // widgets home to the frames they last had on that display.
+    @objc private func screensChanged() {
+        screenReshuffleWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.widgets.forEach { $0.restorePlacementIfDisplayReturned() }
+        }
+        screenReshuffleWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: work)
     }
 
     // MARK: - Widget management
@@ -21,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         widget.onConfigChange = { [weak self] in self?.persist() }
         widget.applyPersistedCollapse()
+        widget.recordPlacementIfUnset()
         widgets.append(widget)
         widget.window.makeKeyAndOrderFront(nil)
     }
@@ -98,6 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if widget.isCollapsed { widget.toggleCollapsed() }
         guard let size = runSizePrompt(current: widget.window.frame.size) else { return }
         widget.window.setContentSize(size)
+        widget.recordPlacement()
     }
 
     @objc private func toggleFloat(_ sender: NSMenuItem) {

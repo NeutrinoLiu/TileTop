@@ -65,6 +65,14 @@ Quit the running instance before rebuilding: `pkill -x TileTop`.
 - **"Float on Top"** in the status-item menu is a fallback for login flows if
   the desktop layer refuses keyboard focus.
 - Window frames are remembered via `setFrameAutosaveName("Widget-<uuid>")`.
+- **Per-display placement memory**: each widget stores `homeDisplay` (display
+  hardware UUID via `CGDisplayCreateUUIDFromDisplayID`) plus a
+  `displayFrames` map, updated only on user-driven moves/resizes
+  (`NSEvent.pressedMouseButtons != 0` filters out the system yanking windows
+  to the main screen on display disconnect). On
+  `didChangeScreenParametersNotification` (debounced 2s) and at launch,
+  widgets whose home display is attached but who sit elsewhere are moved
+  back to their remembered frame.
 - **Login items point at the absolute path** of `build/TileTop.app`.
   `build.sh` recreates that path on every rebuild, which is fine — but
   moving/renaming the project folder breaks autostart.
