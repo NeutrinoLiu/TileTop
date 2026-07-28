@@ -3,6 +3,10 @@ import WebKit
 
 final class BrowserWidget: Widget, WKNavigationDelegate, WKUIDelegate {
     private var webView: WKWebView!
+    private var backButton: NSButton!
+    private var forwardButton: NSButton!
+    private var reloadButton: NSButton!
+    private var navObservations: [NSKeyValueObservation] = []
 
     private var homeURL: URL { URL(string: config.url ?? "") ?? URL(string: "https://www.apple.com")! }
 
@@ -24,7 +28,47 @@ final class BrowserWidget: Widget, WKNavigationDelegate, WKUIDelegate {
         webView.underPageBackgroundColor = .clear
 
         installContent(webView, belowTitleBar: true)
+
+        // Nav buttons live in the glass title bar, above the drag strip in z-order.
+        backButton = navButton("chevron.left", #selector(goBack))
+        forwardButton = navButton("chevron.right", #selector(goForward))
+        reloadButton = navButton("arrow.clockwise", #selector(reload))
+        NSLayoutConstraint.activate([
+            backButton.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 10),
+            forwardButton.leadingAnchor.constraint(equalTo: backButton.trailingAnchor, constant: 6),
+            reloadButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
+        ])
+        navObservations = [
+            webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] view, _ in
+                self?.backButton.isEnabled = view.canGoBack
+            },
+            webView.observe(\.canGoForward, options: [.initial, .new]) { [weak self] view, _ in
+                self?.forwardButton.isEnabled = view.canGoForward
+            },
+        ]
+
         webView.load(URLRequest(url: homeURL))
+    }
+
+    private func navButton(_ symbol: String, _ action: Selector) -> NSButton {
+        let config = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)!
+            .withSymbolConfiguration(config)!
+        let button = NSButton(image: image, target: self, action: action)
+        button.isBordered = false
+        button.contentTintColor = .tertiaryLabelColor
+        button.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(button)
+        NSLayoutConstraint.activate([
+            button.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
+            button.widthAnchor.constraint(equalToConstant: 18),
+            button.heightAnchor.constraint(equalToConstant: 18),
+        ])
+        return button
+    }
+
+    override func didSetCollapsed(_ collapsed: Bool) {
+        [backButton, forwardButton, reloadButton].forEach { $0?.isHidden = collapsed }
     }
 
     override func addMenuItems(to menu: NSMenu) {
@@ -39,6 +83,8 @@ final class BrowserWidget: Widget, WKNavigationDelegate, WKUIDelegate {
     }
 
     @objc private func reload() { webView.reload() }
+    @objc private func goBack() { webView.goBack() }
+    @objc private func goForward() { webView.goForward() }
     @objc private func goHome() { webView.load(URLRequest(url: homeURL)) }
     @objc private func openInBrowser() { NSWorkspace.shared.open(webView.url ?? homeURL) }
 

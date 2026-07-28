@@ -18,7 +18,9 @@ Collapse state and the expanded frame persist in the config.
 ## Widget 1: Browser widget (implemented)
 
 A WKWebView widget (default/migrated instance shows
-`https://app.sqrtwo.com/calendar`).
+`https://app.sqrtwo.com/calendar`). The glass title bar has faint
+back/forward buttons (left, enabled via KVO on canGoBack/canGoForward) and a
+reload button (right); they hide when the widget is rolled up.
 
 ## Widget 2: Folder canvas (implemented)
 
